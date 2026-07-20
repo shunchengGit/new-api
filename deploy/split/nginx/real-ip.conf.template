@@ -1,0 +1,5 @@
+# Safe default: do not trust client supplied forwarding headers.
+# To use a trusted L4/L7 proxy, replace this file at deployment time with explicit
+# set_real_ip_from CIDRs and the appropriate real_ip_header directive.
+real_ip_header X-Real-IP;
+real_ip_recursive off;

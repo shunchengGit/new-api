@@ -1,0 +1,122 @@
+services:
+  frontend:
+    image: ${FRONTEND_IMAGE:-new-api-frontend:${APP_VERSION}}
+    build:
+      context: ../..
+      dockerfile: deploy/split/Dockerfile.frontend
+      args:
+        THEME: ${THEME:?set THEME to default or classic}
+        APP_VERSION: ${APP_VERSION:?set an immutable APP_VERSION}
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:${PUBLIC_PORT:-8080}:8080"
+    environment:
+      BACKEND_SERVICE: backend:3000
+      EXTERNAL_SCHEME: ${PUBLIC_SCHEME:-http}
+      PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
+      LISTEN_PORT: 8080
+      CLIENT_MAX_BODY_SIZE: ${MAX_REQUEST_BODY_MB:-128}m
+      GOOGLE_ANALYTICS_ID: ${GOOGLE_ANALYTICS_ID:-}
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+      UMAMI_SCRIPT_URL: ${UMAMI_SCRIPT_URL:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null --header='Host: ${PUBLIC_HOST:-localhost}' http://127.0.0.1:8080/build-info.json"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp:uid=101,gid=101,mode=1770
+      - /usr/share/nginx/html:uid=101,gid=101,mode=0750
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 120s
+    networks:
+      - edge
+
+  backend:
+    image: ${BACKEND_IMAGE:-new-api-backend:${APP_VERSION}}
+    build:
+      context: ../..
+      dockerfile: deploy/split/Dockerfile.backend
+      args:
+        APP_VERSION: ${APP_VERSION:?set an immutable APP_VERSION}
+    restart: unless-stopped
+    command: --log-dir /app/logs
+    environment:
+      SQL_DSN: postgresql://${POSTGRES_USER:-newapi}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-newapi}
+      REDIS_CONN_STRING: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379/0
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SESSION_COOKIE_TRUSTED_URL: ${SESSION_COOKIE_TRUSTED_URL:-}
+      MAX_REQUEST_BODY_MB: ${MAX_REQUEST_BODY_MB:-128}
+    volumes:
+      - new_api_data:/data
+      - new_api_logs:/app/logs
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -Eq '\"success\"[[:space:]]*:[[:space:]]*true'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 120s
+    networks:
+      - edge
+      - private
+
+  database:
+    image: postgres:15.13-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-newapi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-newapi}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    stop_grace_period: 120s
+    networks:
+      - private
+
+  redis:
+    image: redis:7.4.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    stop_grace_period: 120s
+    networks:
+      - private
+
+volumes:
+  new_api_data:
+  new_api_logs:
+  postgres_data:
+  redis_data:
+
+networks:
+  edge:
+  private:
+    internal: true

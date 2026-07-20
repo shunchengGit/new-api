@@ -1,0 +1,35 @@
+FROM oven/bun:1@sha256:0733e50325078969732ebe3b15ce4c4be5082f18c4ac1a0f0ca4839c2e4e42a7 AS builder
+
+ARG THEME
+ARG APP_VERSION
+WORKDIR /build/web
+
+RUN test -n "$APP_VERSION" \
+    && case "$APP_VERSION" in *[!A-Za-z0-9._+-]*) exit 1 ;; esac \
+    && { test "$THEME" = default || test "$THEME" = classic; }
+COPY web/package.json web/bun.lock ./
+COPY web/default/package.json ./default/package.json
+COPY web/classic/package.json ./classic/package.json
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    if [ "$THEME" = classic ]; then \
+        bun install --filter ./classic --frozen-lockfile; \
+    else \
+        bun install --frozen-lockfile; \
+    fi
+COPY web/default ./default
+COPY web/classic ./classic
+RUN cd "$THEME" \
+    && DISABLE_ESLINT_PLUGIN='true' VITE_REACT_APP_VERSION="$APP_VERSION" bun run build \
+    && printf '{"theme":"%s","version":"%s"}\n' "$THEME" "$APP_VERSION" > dist/build-info.json
+
+FROM nginxinc/nginx-unprivileged:1.27.5-alpine
+
+ARG THEME
+COPY --from=builder /build/web/${THEME}/dist /usr/share/nginx/html-source
+COPY deploy/split/nginx /etc/nginx/templates
+COPY --chmod=0555 deploy/split/scripts/render-index.sh /usr/local/bin/render-index
+
+USER 101
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/render-index"]
+CMD ["nginx", "-c", "/tmp/nginx/conf.d/nginx.conf", "-g", "daemon off;"]
