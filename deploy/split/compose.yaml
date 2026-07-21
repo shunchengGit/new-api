@@ -1,12 +1,6 @@
 services:
   frontend:
-    image: ${FRONTEND_IMAGE:-new-api-frontend:${APP_VERSION}}
-    build:
-      context: ../..
-      dockerfile: deploy/split/Dockerfile.frontend
-      args:
-        THEME: ${THEME:?set THEME to default or classic}
-        APP_VERSION: ${APP_VERSION:?set an immutable APP_VERSION}
+    image: ${FRONTEND_IMAGE:?set FRONTEND_IMAGE to an immutable name@sha256:digest}
     restart: unless-stopped
     ports:
       - "${BIND_ADDRESS:-0.0.0.0}:${PUBLIC_PORT:-8080}:8080"
@@ -39,12 +33,7 @@ services:
       - edge
 
   backend:
-    image: ${BACKEND_IMAGE:-new-api-backend:${APP_VERSION}}
-    build:
-      context: ../..
-      dockerfile: deploy/split/Dockerfile.backend
-      args:
-        APP_VERSION: ${APP_VERSION:?set an immutable APP_VERSION}
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to an immutable name@sha256:digest}
     restart: unless-stopped
     command: --log-dir /app/logs
     environment:
@@ -76,7 +65,7 @@ services:
       - private
 
   database:
-    image: postgres:15.13-alpine
+    image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE to an immutable name@sha256:digest}
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-newapi}
@@ -94,7 +83,7 @@ services:
       - private
 
   redis:
-    image: redis:7.4.2-alpine
+    image: ${REDIS_IMAGE:?set REDIS_IMAGE to an immutable name@sha256:digest}
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}"]
     environment:

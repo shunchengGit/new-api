@@ -1,0 +1,17 @@
+root @STATIC_RELEASE_ROOT@;
+index index.html;
+client_max_body_size @CLIENT_MAX_BODY_SIZE@;
+
+include @REAL_IP_INCLUDE@;
+
+if ($host != "@PUBLIC_HOST@") {
+    return 444;
+}
+
+location = /.__new_api_candidate {
+    default_type text/plain;
+    add_header Cache-Control "no-store" always;
+    return 200 "@DEPLOYMENT_CHALLENGE@\n";
+}
+
+include @ROUTE_CONTRACT_INCLUDE@;

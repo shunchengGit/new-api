@@ -1,0 +1,70 @@
+location = /assets {
+    return 404;
+}
+
+location = /static {
+    return 404;
+}
+
+location ^~ /assets/ {
+    try_files $uri =404;
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+}
+
+location ^~ /static/ {
+    try_files $uri =404;
+    expires 1y;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+}
+
+location = /index.html {
+    try_files /index.html =404;
+    expires -1;
+    add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+}
+
+location = /build-info.json {
+    try_files /build-info.json =404;
+    expires -1;
+    add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+}
+
+location ~ ^/[^/]+\.(?:ico|png|svg|webmanifest|json|txt|xml)$ {
+    try_files $uri =404;
+    expires -1;
+    add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+}
+
+location = /api { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /api/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location = /v1 { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /v1/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location = /v1beta { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /v1beta/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location = /pg { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /pg/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location = /mj { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /mj/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location = /suno { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /suno/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location = /kling { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /kling/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location = /jimeng { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+location ^~ /jimeng/ { include @BACKEND_PROXY_INCLUDE@; proxy_pass @BACKEND_UPSTREAM@; }
+
+location ~ ^/(?:v1/)?dashboard/billing/(?:subscription|usage)/?$ {
+    include @BACKEND_PROXY_INCLUDE@;
+    proxy_pass @BACKEND_UPSTREAM@;
+}
+
+location ~ ^/[^/]+/mj/(?:image|submit|task|insight-face)(?:/|$) {
+    include @BACKEND_PROXY_INCLUDE@;
+    proxy_pass @BACKEND_UPSTREAM@;
+}
+
+location / {
+    try_files $uri $uri/ /index.html =404;
+    expires -1;
+    add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0" always;
+}

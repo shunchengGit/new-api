@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "frontend": {
+    "artifactSha256": "replace-with-64-character-sha256",
+    "version": "v1.0.0-rc.21",
+    "theme": "default",
+    "revision": "0123456789abcdef0123456789abcdef01234567",
+    "releaseId": "replace-with-immutable-release-id"
+  },
+  "backend": {
+    "imageDigest": "sha256:replace-with-64-character-sha256",
+    "version": "v1.0.0-rc.21",
+    "theme": "default"
+  },
+  "previousTuple": "replace-with-prior-release-tuple-reference"
+}

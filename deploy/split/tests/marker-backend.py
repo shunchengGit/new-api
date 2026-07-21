@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 import http.server
 import json
+import os
 import socketserver
 import sys
 import time
+
+version = os.environ.get("FIXTURE_VERSION", "v1.0.0-rc.21")
+theme = os.environ.get("FIXTURE_THEME", "default")
+linuxdo = os.environ.get("FIXTURE_LINUXDO", "false") == "true"
 
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
@@ -17,6 +22,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
     def do_GET(self):
+        if self.path == '/api/status':
+            self._reply(json.dumps({'success': True, 'data': {'version': version, 'theme': theme, 'linuxdo_oauth': linuxdo}}))
+            return
         if self.path in ('/v1/sse', '/api/sse'):
             self.send_response(200)
             self.send_header('Content-Type', 'text/event-stream')
